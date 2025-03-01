@@ -43,6 +43,9 @@ const FILE_TYPES = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
   'application/vnd.ms-excel': 'XLS',
 
+  // PDF
+  'application/pdf': 'PDF',
+
   // Text/Code
   'text/plain': 'TEXT',
   'text/javascript': 'CODE',
@@ -113,7 +116,14 @@ function displayFileMetadata(file) {
   metadataCard.innerHTML = `
         <div class="metadata-header">
             <div class="metadata-title">${file.name}</div>
-            <div class="file-type-tag">${fileType}</div>
+            <div class="metadata-actions">
+                <div class="file-type-tag">${fileType}</div>
+                <button class="close-button" data-file-id="${generateFileId(
+                  file
+                )}" title="Close file">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
         </div>
         <div class="metadata-details">
             <div class="metadata-item">
@@ -138,6 +148,35 @@ function displayFileMetadata(file) {
     `;
 
   fileMetadata.appendChild(metadataCard);
+
+  // Add event listener to the close button
+  metadataCard
+    .querySelector('.close-button')
+    .addEventListener('click', function () {
+      closeFile(this.getAttribute('data-file-id'));
+    });
+}
+
+// Function to close/remove a file
+function closeFile(fileId) {
+  // Remove the metadata card
+  const metadataCard = document.getElementById(`metadata-${fileId}`);
+  if (metadataCard) {
+    metadataCard.remove();
+  }
+
+  // Remove the preview container
+  const previewContainer = document.getElementById(`preview-${fileId}`);
+  if (previewContainer) {
+    previewContainer.remove();
+  }
+
+  // If no files left, show a message
+  if (fileMetadata.children.length === 0) {
+    fileMetadata.innerHTML =
+      '<div class="message info">No files selected</div>';
+    filePreview.innerHTML = '';
+  }
 }
 
 // Process file based on type
@@ -170,6 +209,9 @@ function processFile(file) {
       break;
     case 'VIDEO':
       processVideo(file, previewContainer);
+      break;
+    case 'PDF':
+      processPDF(file, previewContainer);
       break;
     case 'CODE':
     case 'TEXT':
@@ -278,6 +320,120 @@ function processVideo(file, container) {
   reader.readAsDataURL(file);
 }
 
+// Process PDF files
+function processPDF(file, container) {
+  const reader = new FileReader();
+
+  reader.onload = function (e) {
+    const pdfData = new Uint8Array(e.target.result);
+
+    // Create the PDF viewer container
+    const pdfPreview = document.createElement('div');
+    pdfPreview.className = 'pdf-preview';
+
+    // Create controls
+    const pdfControls = document.createElement('div');
+    pdfControls.className = 'pdf-controls';
+
+    // Create canvas container
+    const canvasContainer = document.createElement('div');
+    canvasContainer.className = 'pdf-canvas-container';
+
+    const canvas = document.createElement('canvas');
+    canvas.className = 'pdf-canvas';
+    canvasContainer.appendChild(canvas);
+
+    // Add controls and canvas to preview
+    pdfPreview.appendChild(pdfControls);
+    pdfPreview.appendChild(canvasContainer);
+
+    // Clear container and add preview
+    container.innerHTML = '';
+    container.appendChild(pdfPreview);
+
+    // Load the PDF
+    const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+    loadingTask.promise
+      .then(function (pdf) {
+        // Store PDF data
+        container.pdfDocument = pdf;
+        container.currentPage = 1;
+
+        // Update controls
+        updatePDFControls(container, pdfControls, canvas);
+
+        // Render first page
+        renderPDFPage(container.pdfDocument, container.currentPage, canvas);
+      })
+      .catch(function (error) {
+        container.innerHTML = `<div class="message error">Error loading PDF: ${error.message}</div>`;
+      });
+  };
+
+  reader.onerror = function () {
+    container.innerHTML =
+      '<div class="message error">Error reading the PDF file.</div>';
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+// Update PDF controls
+function updatePDFControls(container, controlsElement, canvas) {
+  const pdf = container.pdfDocument;
+  const currentPage = container.currentPage;
+  const totalPages = pdf.numPages;
+
+  controlsElement.innerHTML = `
+    <button class="prev-button" ${currentPage <= 1 ? 'disabled' : ''}>
+      <i class="fas fa-chevron-left"></i> Previous
+    </button>
+    <span class="page-info">Page ${currentPage} of ${totalPages}</span>
+    <button class="next-button" ${currentPage >= totalPages ? 'disabled' : ''}>
+      Next <i class="fas fa-chevron-right"></i>
+    </button>
+  `;
+
+  // Add event listeners
+  const prevButton = controlsElement.querySelector('.prev-button');
+  const nextButton = controlsElement.querySelector('.next-button');
+
+  prevButton.addEventListener('click', function () {
+    if (currentPage > 1) {
+      container.currentPage--;
+      renderPDFPage(pdf, container.currentPage, canvas);
+      updatePDFControls(container, controlsElement, canvas);
+    }
+  });
+
+  nextButton.addEventListener('click', function () {
+    if (currentPage < totalPages) {
+      container.currentPage++;
+      renderPDFPage(pdf, container.currentPage, canvas);
+      updatePDFControls(container, controlsElement, canvas);
+    }
+  });
+}
+
+// Render PDF page
+function renderPDFPage(pdf, pageNumber, canvas) {
+  pdf.getPage(pageNumber).then(function (page) {
+    const viewport = page.getViewport({ scale: 1.5 });
+
+    // Set canvas dimensions
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    // Render the page
+    const renderContext = {
+      canvasContext: canvas.getContext('2d'),
+      viewport: viewport,
+    };
+
+    page.render(renderContext);
+  });
+}
+
 // Process text or code files
 function processTextOrCode(file, container, fileExtension) {
   const reader = new FileReader();
@@ -371,6 +527,8 @@ function getFileType(file) {
       return 'IMAGE';
     } else if (['mp4', 'webm', 'ogg', 'mov'].includes(extension)) {
       return 'VIDEO';
+    } else if (['pdf'].includes(extension)) {
+      return 'PDF';
     } else if (Object.keys(CODE_EXTENSIONS).includes(extension)) {
       return 'CODE';
     }
