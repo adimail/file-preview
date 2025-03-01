@@ -118,6 +118,11 @@ function displayFileMetadata(file) {
             <div class="metadata-title">${file.name}</div>
             <div class="metadata-actions">
                 <div class="file-type-tag">${fileType}</div>
+                <button class="fullscreen-button" data-file-id="${generateFileId(
+                  file
+                )}" title="View in full screen">
+                    <i class="fas fa-expand"></i>
+                </button>
                 <button class="close-button" data-file-id="${generateFileId(
                   file
                 )}" title="Close file">
@@ -154,6 +159,13 @@ function displayFileMetadata(file) {
     .querySelector('.close-button')
     .addEventListener('click', function () {
       closeFile(this.getAttribute('data-file-id'));
+    });
+
+  // Add event listener to the fullscreen button
+  metadataCard
+    .querySelector('.fullscreen-button')
+    .addEventListener('click', function () {
+      toggleFullScreen(this.getAttribute('data-file-id'), file.name);
     });
 }
 
@@ -321,7 +333,7 @@ function processVideo(file, container) {
 }
 
 // Process PDF files
-function processPDF(file, container) {
+function processPDF(file, container, isFullscreen = false) {
   const reader = new FileReader();
 
   reader.onload = function (e) {
@@ -362,8 +374,14 @@ function processPDF(file, container) {
         // Update controls
         updatePDFControls(container, pdfControls, canvas);
 
-        // Render first page
-        renderPDFPage(container.pdfDocument, container.currentPage, canvas);
+        // Render first page with appropriate scale
+        const scale = isFullscreen ? 2.0 : 1.5;
+        renderPDFPage(
+          container.pdfDocument,
+          container.currentPage,
+          canvas,
+          scale
+        );
       })
       .catch(function (error) {
         container.innerHTML = `<div class="message error">Error loading PDF: ${error.message}</div>`;
@@ -416,9 +434,9 @@ function updatePDFControls(container, controlsElement, canvas) {
 }
 
 // Render PDF page
-function renderPDFPage(pdf, pageNumber, canvas) {
+function renderPDFPage(pdf, pageNumber, canvas, scale = 1.5) {
   pdf.getPage(pageNumber).then(function (page) {
-    const viewport = page.getViewport({ scale: 1.5 });
+    const viewport = page.getViewport({ scale: scale });
 
     // Set canvas dimensions
     canvas.height = viewport.height;
@@ -478,6 +496,10 @@ function displayTable(data, container) {
     return;
   }
 
+  // Create table wrapper
+  const tableWrapper = document.createElement('div');
+  tableWrapper.className = 'table-wrapper';
+
   let html = '<table><thead><tr>';
   const headers = Object.keys(data[0]);
 
@@ -499,7 +521,35 @@ function displayTable(data, container) {
   });
 
   html += '</tbody></table>';
-  container.innerHTML = html;
+  tableWrapper.innerHTML = html;
+  container.innerHTML = '';
+  container.appendChild(tableWrapper);
+
+  // Check if table is scrollable
+  const table = tableWrapper.querySelector('table');
+  if (table.scrollWidth > tableWrapper.clientWidth) {
+    tableWrapper.classList.add('is-scrollable');
+  }
+
+  // Update scrollable class on resize
+  const updateScrollableClass = () => {
+    if (table.scrollWidth > tableWrapper.clientWidth) {
+      tableWrapper.classList.add('is-scrollable');
+    } else {
+      tableWrapper.classList.remove('is-scrollable');
+    }
+  };
+
+  // Add resize observer
+  const resizeObserver = new ResizeObserver(updateScrollableClass);
+  resizeObserver.observe(tableWrapper);
+
+  // Clean up observer when container is removed
+  const cleanupObserver = () => {
+    resizeObserver.disconnect();
+    container.removeEventListener('DOMNodeRemoved', cleanupObserver);
+  };
+  container.addEventListener('DOMNodeRemoved', cleanupObserver);
 }
 
 // Helper functions
@@ -560,4 +610,87 @@ function showMessage(message, type) {
 
   filePreview.innerHTML = '';
   filePreview.appendChild(messageElement);
+}
+
+// Toggle full screen mode for a file
+function toggleFullScreen(fileId, fileName) {
+  const previewContainer = document.getElementById(`preview-${fileId}`);
+  if (!previewContainer) return;
+
+  // Check if we're already in fullscreen
+  const existingFullscreen = document.querySelector('.fullscreen-mode');
+  if (existingFullscreen) {
+    // Exit fullscreen
+    document.body.removeChild(existingFullscreen);
+    document.body.style.overflow = '';
+    return;
+  }
+
+  // Create fullscreen container
+  const fullscreenContainer = document.createElement('div');
+  fullscreenContainer.className = 'fullscreen-mode';
+
+  // Create header
+  const header = document.createElement('div');
+  header.className = 'fullscreen-header';
+
+  // Add title
+  const title = document.createElement('div');
+  title.className = 'fullscreen-title';
+  title.textContent = fileName;
+  header.appendChild(title);
+
+  // Add actions
+  const actions = document.createElement('div');
+  actions.className = 'fullscreen-actions';
+
+  const exitButton = document.createElement('button');
+  exitButton.className = 'fullscreen-button';
+  exitButton.title = 'Exit full screen';
+  exitButton.innerHTML = '<i class="fas fa-compress"></i>';
+  exitButton.addEventListener('click', function () {
+    document.body.removeChild(fullscreenContainer);
+    document.body.style.overflow = '';
+  });
+
+  actions.appendChild(exitButton);
+  header.appendChild(actions);
+
+  // Create content area
+  const content = document.createElement('div');
+  content.className = 'fullscreen-content';
+
+  // Clone the preview content
+  const previewContent = previewContainer.cloneNode(true);
+  content.appendChild(previewContent);
+
+  // Add everything to the fullscreen container
+  fullscreenContainer.appendChild(header);
+  fullscreenContainer.appendChild(content);
+
+  // Add to body and prevent scrolling of background
+  document.body.appendChild(fullscreenContainer);
+  document.body.style.overflow = 'hidden';
+
+  // Special handling for PDFs in fullscreen
+  const pdfPreview = content.querySelector('.pdf-preview');
+  if (pdfPreview) {
+    // We need to re-render the PDF in fullscreen mode
+    const fileMetadataCard = document.getElementById(`metadata-${fileId}`);
+    if (fileMetadataCard) {
+      const fileRow = fileMetadataCard.closest('.metadata-card');
+      if (fileRow) {
+        // Find the original file from the input
+        const files = fileInput.files;
+        for (let i = 0; i < files.length; i++) {
+          if (generateFileId(files[i]) === fileId) {
+            // Re-process the PDF for fullscreen
+            const pdfContainer = content.querySelector('.preview-container');
+            processPDF(files[i], pdfContainer, true);
+            break;
+          }
+        }
+      }
+    }
+  }
 }

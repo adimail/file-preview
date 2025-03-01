@@ -152,7 +152,8 @@ body {
     text-transform: uppercase;
 }
 
-.close-button {
+.close-button,
+.fullscreen-button {
     background: none;
     border: none;
     color: var(--text-color);
@@ -166,7 +167,8 @@ body {
     transition: all 0.2s ease;
 }
 
-.close-button:hover {
+.close-button:hover,
+.fullscreen-button:hover {
     opacity: 1;
     background-color: var(--hover-color);
 }
@@ -197,11 +199,46 @@ body {
 }
 
 /* Table styles for CSV/XLSX */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Smooth scrolling on iOS devices */
+    position: relative;
+    background: var(--bg-color);
+    margin: 10px 0;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px var(--card-shadow);
+}
+
+/* Show scroll indicator on mobile */
+.table-wrapper::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 5px;
+    background: linear-gradient(to right, transparent, var(--border-color));
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+/* Show scroll indicator only when table is scrollable */
+@media (max-width: 768px) {
+    .table-wrapper.is-scrollable::after {
+        opacity: 1;
+    }
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
+    white-space: nowrap;
     background-color: var(--bg-color);
+    min-width: 500px;
+    /* Ensure minimum width for small screens */
 }
 
 table,
@@ -214,22 +251,75 @@ th,
 td {
     padding: 12px;
     text-align: left;
+    min-width: 120px;
+    /* Ensure minimum column width */
+}
+
+/* Allow text wrapping for very long content */
+td {
+    white-space: normal;
+    word-break: break-word;
+    max-width: 300px;
+    /* Maximum column width */
 }
 
 th {
     background-color: var(--table-header-bg);
     font-weight: 600;
+    white-space: nowrap;
+    /* Keep headers on one line */
 }
 
 tr:hover {
     background-color: var(--hover-color);
 }
 
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .table-wrapper {
+        margin: 5px -10px;
+        /* Negative margin to allow full-width scrolling */
+        border-radius: 0;
+    }
+
+    th,
+    td {
+        padding: 8px;
+        font-size: 0.9rem;
+    }
+
+    /* First column stays fixed on mobile */
+    th:first-child,
+    td:first-child {
+        position: sticky;
+        left: 0;
+        background-color: var(--bg-color);
+        z-index: 1;
+    }
+
+    th:first-child {
+        z-index: 101;
+        /* Above other headers */
+        background-color: var(--table-header-bg);
+    }
+}
+
+/* Fullscreen table adjustments */
+.fullscreen-content .table-wrapper {
+    height: calc(100vh - 120px);
+    margin: 0;
+    border-radius: 4px;
+}
+
+.fullscreen-content table {
+    margin: 0;
+}
+
 /* Image preview */
 .image-preview {
-    max-width: 100%;
     border-radius: 4px;
     box-shadow: 0 2px 8px var(--card-shadow);
+    margin: auto;
 }
 
 /* Video preview */
@@ -346,4 +436,75 @@ tr:hover {
 
 .pdf-canvas {
     max-width: 100%;
+}
+
+/* Full screen mode */
+.fullscreen-mode {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-color);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.fullscreen-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: var(--nav-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.fullscreen-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.fullscreen-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.fullscreen-content {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+}
+
+.fullscreen-content table {
+    margin: 0 auto;
+}
+
+.fullscreen-content .image-preview,
+.fullscreen-content .video-preview {
+    max-height: calc(100vh - 100px);
+    object-fit: contain;
+}
+
+.fullscreen-content .pdf-preview {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.fullscreen-content .pdf-canvas-container {
+    flex: 1;
+    overflow: auto;
+}
+
+.fullscreen-content .code-preview {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    max-height: none;
 }
