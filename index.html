@@ -1,19 +1,23 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>File Preview</title>
+    <title>File Previewer</title>
     <link rel="stylesheet" href="styles.css" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
     />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css"
+    />
   </head>
   <body>
     <nav class="navbar">
       <div class="nav-content">
-        <h1>File Preview</h1>
+        <h1>Universal File Previewer</h1>
         <button id="themeToggle" class="theme-toggle">
           <i class="fas fa-moon"></i>
         </button>
@@ -21,15 +25,26 @@
     </nav>
     <main class="container">
       <div class="file-input-container">
-        <label for="csvFileInput" class="file-input-label">
-          <i class="fas fa-file-csv"></i>
-          Choose File
+        <label for="fileInput" class="file-input-label">
+          <i class="fas fa-file"></i>
+          Choose Files (Max 10)
         </label>
-        <input type="file" id="csvFileInput" accept=".csv" />
+        <input type="file" id="fileInput" multiple />
+        <div class="file-formats">
+          Supported formats: CSV, XLSX, Images, Videos, Code files (JS, TS, PY,
+          C, etc.)
+        </div>
       </div>
-      <div id="csvPreview"></div>
+
+      <div id="fileMetadata" class="file-metadata"></div>
+
+      <div id="filePreview" class="file-preview"></div>
     </main>
+
+    <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
     <script src="script.js"></script>
   </body>
 </html>
