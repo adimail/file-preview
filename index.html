@@ -1,16 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CSV Previewer</title>
+    <title>File Preview</title>
     <link rel="stylesheet" href="styles.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
   </head>
   <body>
-    <h1>CSV File Previewer</h1>
-    <input type="file" id="csvFileInput" accept=".csv" />
-    <div id="csvPreview"></div>
-    <script src="script.js"></script>
+    <nav class="navbar">
+      <div class="nav-content">
+        <h1>File Preview</h1>
+        <button id="themeToggle" class="theme-toggle">
+          <i class="fas fa-moon"></i>
+        </button>
+      </div>
+    </nav>
+    <main class="container">
+      <div class="file-input-container">
+        <label for="csvFileInput" class="file-input-label">
+          <i class="fas fa-file-csv"></i>
+          Choose File
+        </label>
+        <input type="file" id="csvFileInput" accept=".csv" />
+      </div>
+      <div id="csvPreview"></div>
+    </main>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="script.js"></script>
   </body>
 </html>
